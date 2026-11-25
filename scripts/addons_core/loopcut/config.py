@@ -101,6 +101,25 @@ def anthropic(base_url: str) -> bool:
     return (base_url or "").strip().startswith("anthropic://")
 
 
+# The "Antigravity CLI (agy)" provider: communicates via the local agy CLI binary.
+# No external API key: uses the local agy session and models (Claude Sonnet 4.6 Thinking, etc.).
+AGY_BASE_URL = "agy://local"
+AGY_KEY = "agy-local"
+AGY_MODEL = "claude-sonnet-4-6"
+AGY_EFFORT = "high"
+AGY_EFFORTS = ("low", "medium", "high", "xhigh", "max")
+
+
+# The default provider: Strata's OpenAI-compatible server on this computer (run-swift-abl-iq2_xs.sh serves Swift 1.5
+# on 8099). The server ignores the model name and answers with the model its run script started.
+STRATA_BASE_URL = "http://127.0.0.1:8099/v1"
+STRATA_MODEL = "strata"
+
+
+def agy(base_url: str) -> bool:
+    return (base_url or "").strip().startswith("agy://") or (base_url or "").strip() == "agy"
+
+
 KIMI_HOSTS = ("api.kimi.ai", "api.moonshot.ai", "api.moonshot.cn")
 
 
@@ -189,6 +208,51 @@ class CodexApp:
     model: str = ""
     effort: str = ""
     summary: str = "detailed"   # Reasoning summaries, kept in the transcript; the chat does not show them.
+
+
+@dataclass(frozen=True)
+class Controller:
+    """Opt-in selective review. Dollars are a stop-before-next-request limit, not a provider quote."""
+    model: Config
+    max_calls: int = 12
+    max_seconds: int = 30
+    max_usd: float = 0.10
+    paid_min_credits: int = 20
+    max_corrections: int = 2
+    check_every: int = 3
+    max_checkpoints: int = 3
+    max_improvements: int = 3
+
+
+def controller(base: Config) -> Controller | None:
+    _, get = _getter()
+    if not _as_bool(get("LOOPCUT_CONTROLLER", "off"), "LOOPCUT_CONTROLLER"):
+        return None
+    # In particular, Codex-app sign-in is not an API key or a Loopcut ChatGPT-plan sign-in.
+    # Do not silently charge a different account when the executor has no HTTP model config.
+    model = _role(replace(base, max_output_tokens=2400, reasoning_effort="medium"), get, "LOOPCUT_CONTROLLER_")
+    if chatgpt_plan(model.base_url):
+        model = replace(model, api_key=CHATGPT_PLAN_KEY, model=model.model or CHATGPT_PLAN_MODEL)
+    if not all((model.base_url, model.api_key, model.model)):
+        raise ConfigError("The controller needs a review model. Set LOOPCUT_CONTROLLER_BASE_URL, "
+                          "LOOPCUT_CONTROLLER_MODEL and LOOPCUT_CONTROLLER_API_KEY, or use a configured "
+                          "Loopcut ChatGPT-plan provider.")
+    try:
+        usd = float(get("LOOPCUT_CONTROLLER_MAX_USD", "0.10"))
+    except ValueError:
+        usd = -1
+    if not 0 < usd <= 100:
+        raise ConfigError("LOOPCUT_CONTROLLER_MAX_USD must be greater than 0 and at most 100")
+    return Controller(
+        model=model, max_usd=usd,
+        max_calls=_whole(get, "LOOPCUT_CONTROLLER_MAX_CALLS", 12, 1, 32),
+        max_seconds=_whole(get, "LOOPCUT_CONTROLLER_MAX_SECONDS", 30, 1, 120),
+        paid_min_credits=_whole(get, "LOOPCUT_CONTROLLER_PAID_MIN_CREDITS", 20, 1, 100_000),
+        max_corrections=_whole(get, "LOOPCUT_CONTROLLER_MAX_CORRECTIONS", 2, 0, 4),
+        check_every=_whole(get, "LOOPCUT_CONTROLLER_CHECK_EVERY", 3, 1, 20),
+        max_checkpoints=_whole(get, "LOOPCUT_CONTROLLER_MAX_CHECKPOINTS", 3, 0, 8),
+        max_improvements=_whole(get, "LOOPCUT_CONTROLLER_MAX_IMPROVEMENTS", 3, 0, 8),
+    )
 
 
 def _parse_env_file(path: Path) -> dict[str, str]:
@@ -392,7 +456,7 @@ def stall_seconds() -> int:
 
 
 def _check_base_url(base_url: str, key: str) -> None:
-    if base_url == CHATGPT_PLAN_BASE_URL or anthropic(base_url):  # anthropic:// is always sent as https.
+    if base_url == CHATGPT_PLAN_BASE_URL or anthropic(base_url) or agy(base_url):  # anthropic:// and agy:// are custom schemes.
         return
     if not base_url.startswith("https://") and not base_url.startswith("http://127.0.0.1"):
         raise ConfigError(f"{key} must be https (http is allowed only for 127.0.0.1)")
@@ -414,6 +478,8 @@ def load() -> Config:
     model = get("LOOPCUT_MODEL")
     if chatgpt_plan(base_url):
         base_url, api_key, model = CHATGPT_PLAN_BASE_URL, CHATGPT_PLAN_KEY, model or CHATGPT_PLAN_MODEL
+    elif agy(base_url):
+        base_url, api_key, model = AGY_BASE_URL, AGY_KEY, model or AGY_MODEL
     missing = [k for k, v in (("LOOPCUT_API_KEY", api_key), ("LOOPCUT_BASE_URL", base_url),
                               ("LOOPCUT_MODEL", model)) if not v]
     # Codex runs its own model calls under its own sign-in (codex_app.py): no key or URL needed then.
@@ -442,7 +508,10 @@ def load() -> Config:
         api_key=api_key,
         base_url=base_url,
         model=model,
-        reasoning_effort=get("LOOPCUT_REASONING_EFFORT", CHATGPT_PLAN_EFFORT if chatgpt_plan(base_url) else "medium"),
+        reasoning_effort=get(
+            "LOOPCUT_REASONING_EFFORT",
+            AGY_EFFORT if agy(base_url) else (CHATGPT_PLAN_EFFORT if chatgpt_plan(base_url) else "medium"),
+        ),
         # Model-written code only runs unprompted if the user opts in.
         auto_run=_as_bool(get("LOOPCUT_AUTO_RUN", "false"), "LOOPCUT_AUTO_RUN"),
         auto_look=_as_bool(get("LOOPCUT_AUTO_LOOK", "true"), "LOOPCUT_AUTO_LOOK"),
@@ -484,6 +553,8 @@ def _role(base: Config, get, prefix: str, service_model: str = "") -> Config:
     base_url = (get(prefix + "BASE_URL") or base.base_url).rstrip("/")
     if chatgpt_plan(base_url):
         base_url = CHATGPT_PLAN_BASE_URL
+    elif agy(base_url):
+        base_url = AGY_BASE_URL
     _check_base_url(base_url, prefix + "BASE_URL")
     model = get(prefix + "MODEL") or (service_model if service_model and on_service(base_url) else base.model)
     max_output_tokens = _whole(get, prefix + "MAX_OUTPUT_TOKENS", base.max_output_tokens, 1, MAX_OUTPUT_TOKENS_CEILING)

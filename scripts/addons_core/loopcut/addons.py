@@ -15,7 +15,9 @@ from collections.abc import Sequence
 MAX_LISTED = 12       # More than this and the line stops being cheap; the rest is a count.
 MAX_OP_GROUPS = 3     # Operator prefixes shown per add-on, largest groups first.
 MAX_DESCRIPTION = 70
+MAX_OFF_HITS = 6      # Installed-but-off add-ons one inspect_api search names.
 _cache: tuple[tuple, list[dict]] | None = None  # (enabled add-on names, entries) for that set.
+_off_cache: tuple[tuple, list[dict]] | None = None  # (enabled add-on names, installed-but-off entries).
 
 
 def enabled() -> list[dict]:
@@ -45,6 +47,72 @@ def enabled() -> list[dict]:
     entries.sort(key=lambda e: e["name"].lower())
     _cache = (key, entries)
     return entries
+
+
+def installed_off() -> list[dict]:
+    """User-installed add-ons and extensions that are off: legacy scripts/addons and user extension repos. Core
+    add-ons, the fork's System bundles (bundled_addons.py) and Loopcut itself are left out. Cached per enabled set:
+    the first scan reads every add-on's bl_info or manifest (about 2 s for a hundred)."""
+    global _off_cache
+    import addon_utils
+    import bpy
+    from . import settings
+    key = tuple(bpy.context.preferences.addons.keys())
+    if _off_cache is not None and _off_cache[0] == key:
+        return _off_cache[1]
+    core = os.path.realpath(os.path.join(bpy.utils.system_resource("SCRIPTS"), "addons_core")) + os.sep
+    entries = []
+    for fake in addon_utils.modules(refresh=False):
+        name = fake.__name__
+        if (name in key or name == settings.PACKAGE or name.startswith("bl_ext.system.")
+                or os.path.realpath(getattr(fake, "__file__", "") or "").startswith(core)):
+            continue
+        info = addon_utils.module_bl_info(fake)
+        entries.append({"module": name, "name": info.get("name") or name,
+                        "category": info.get("category") or "",
+                        "description": " ".join(str(info.get("description") or "").split())})
+    entries.sort(key=lambda e: e["name"].lower())
+    _off_cache = (key, entries)
+    return entries
+
+
+def off_hint(entry: dict) -> str:
+    text = f"{entry['name']} [{entry['module']}]"
+    if entry["category"]:
+        text += f" ({entry['category']})"
+    description = entry["description"]
+    if len(description) > MAX_DESCRIPTION:
+        description = description[:MAX_DESCRIPTION - 1].rstrip() + "…"
+    return f"{text}: {description}" if description else text
+
+
+def search_off(query: str) -> list[str]:
+    """Installed-but-off add-ons whose name, module, category and description hold every word of query."""
+    terms = query.lower().split()
+    if not terms:
+        return []
+    hits = [off_hint(e) for e in installed_off()
+            if all(t in " ".join((e["name"], e["module"], e["category"], e["description"])).lower() for t in terms)]
+    if not hits:
+        return []
+    shown = hits[:MAX_OFF_HITS] + ([f"  +{len(hits) - MAX_OFF_HITS} more"] if len(hits) > MAX_OFF_HITS else [])
+    return ["Installed add-ons that are off; turning one on runs its code, so it goes through run_python: "
+            f"`import addon_utils; {TURN_ON.format(module='<module>')}`:", *shown]
+
+
+TURN_ON = "addon_utils.enable({module!r}, default_set=True)"
+
+
+def off_notice(module: str) -> str | None:
+    """How to turn on the installed-but-off add-on that module names; None when it names none. Turning one on runs
+    its register(), so it goes through run_python, which the user approves; inspect_api, which runs unasked, only
+    says how."""
+    entry = next((e for e in installed_off() if e["module"] == module), None)
+    if entry is None:
+        return None
+    return (f"{off_hint(entry)} is installed but off, so it has registered nothing yet. Turning it on runs its "
+            f"code: call run_python with `import addon_utils; {TURN_ON.format(module=module)}`, then inspect_api "
+            "again for its operators.")
 
 
 def _info(module) -> dict:
@@ -97,8 +165,9 @@ def _op_groups(idnames: list[str]) -> str:
     return ", ".join(parts)
 
 
-def line(entries: list[dict], bundled: Sequence[dict] = ()) -> str:
-    """Pure formatting, installed first; both sections share the MAX_LISTED entry budget."""
+def line(entries: list[dict], bundled: Sequence[dict] = (), off_count: int = 0) -> str:
+    """Pure formatting, installed first; both sections share the MAX_LISTED entry budget. off_count: how many installed
+    add-ons are off, named only as a count; inspect_api search finds them."""
     parts = []
     for entry in entries[:MAX_LISTED]:
         text = f"{entry['name']} [{entry['module']}]"
@@ -122,4 +191,198 @@ def line(entries: list[dict], bundled: Sequence[dict] = ()) -> str:
         if len(off) > budget:
             shown.append(f"+{len(off) - budget} more bundled")
         sections.append("Bundled, off until inspect_api names one: " + "; ".join(shown))
+    if off_count:
+        sections.append(f"{off_count} more installed add-ons are off: inspect_api search (e.g. 'uv', 'retopology', "
+                        "'rig') finds them and says how to turn one on")
     return "; ".join(sections)
+
+
+RECIPES = {
+    "zenuv": {
+        "module": "zenuv",
+        "name": "Zen UV",
+        "operator": "bpy.ops.uv.zenuv_unwrap",
+        "signature": "bpy.ops.uv.zenuv_unwrap(action='UNWRAP', method='CONFORMAL', pack=True)",
+        "mode": "EDIT_MESH",
+        "context": "Active mesh object in edit mode with faces selected",
+        "working_example": "bpy.ops.object.mode_set(mode='EDIT')\nbpy.ops.mesh.select_all(action='SELECT')\nbpy.ops.uv.zenuv_unwrap()",
+        "native_fallback": "bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)",
+        "description": "High-efficiency UV unwrapping and seam processing.",
+    },
+    "quad_remesher": {
+        "module": "quad_remesher",
+        "name": "Quad Remesher",
+        "operator": "bpy.ops.qremesher.remesh",
+        "signature": "bpy.ops.qremesher.remesh(target_count=5000, adaptive_size=50)",
+        "mode": "OBJECT",
+        "context": "Active mesh object in object mode",
+        "working_example": "bpy.ops.object.mode_set(mode='OBJECT')\nbpy.ops.qremesher.remesh(target_count=4000)",
+        "native_fallback": "bpy.ops.object.modifier_add(type='REMESH')\nbpy.context.active_object.modifiers['Remesh'].mode = 'VOXEL'\nbpy.context.active_object.modifiers['Remesh'].voxel_size = 0.02",
+        "description": "Automatic quad topology reconstruction.",
+    },
+    "hardops": {
+        "module": "hardops",
+        "name": "Hard Ops",
+        "operator": "bpy.ops.hops.bool_difference",
+        "signature": "bpy.ops.hops.bool_difference()",
+        "mode": "OBJECT",
+        "context": "Active base object with selected cutter object",
+        "working_example": "bpy.ops.hops.bool_difference()",
+        "native_fallback": "mod = bpy.context.active_object.modifiers.new('Boolean', 'BOOLEAN')\nmod.operation = 'DIFFERENCE'\nmod.object = cutter",
+        "description": "Non-destructive hard-surface boolean modeling.",
+    },
+    "meshmachine": {
+        "module": "meshmachine",
+        "name": "MESHmachine",
+        "operator": "bpy.ops.machin3.fuse",
+        "signature": "bpy.ops.machin3.fuse()",
+        "mode": "EDIT_MESH",
+        "context": "Edit mode with bevel or chamfer edges selected",
+        "working_example": "bpy.ops.object.mode_set(mode='EDIT')\nbpy.ops.machin3.fuse()",
+        "native_fallback": "bpy.ops.mesh.bevel(offset=0.02, segments=4)",
+        "description": "Chamfer, fuse, and polygon transition modeling.",
+    },
+    "uvpackmaster": {
+        "module": "uvpackmaster",
+        "name": "UVPackmaster",
+        "operator": "bpy.ops.uvpm.pack",
+        "signature": "bpy.ops.uvpm.pack(margin=0.005, rot_step=90)",
+        "mode": "EDIT_MESH",
+        "context": "Edit mode with UV editor active and islands selected",
+        "working_example": "bpy.ops.uvpm.pack()",
+        "native_fallback": "bpy.ops.uv.pack_islands(margin=0.005)",
+        "description": "Optimized GPU-accelerated UV packing.",
+    },
+    "smart_remesh": {
+        "module": "smart_remesh",
+        "name": "Smart Remesh",
+        "operator": "bpy.ops.mesh.smart_remesh",
+        "signature": "bpy.ops.mesh.smart_remesh(voxel_size=0.02)",
+        "mode": "OBJECT",
+        "context": "Active mesh object in object mode",
+        "working_example": "bpy.ops.mesh.smart_remesh(voxel_size=0.02)",
+        "native_fallback": "bpy.ops.object.modifier_add(type='REMESH')",
+        "description": "Fast surface voxel and polygon remeshing.",
+    },
+}
+
+
+def get_recipe(addon_or_op: str) -> dict | None:
+    """Find a verified recipe by add-on name, module, or operator substring."""
+    key = str(addon_or_op).lower().strip()
+    if key in RECIPES:
+        return RECIPES[key]
+    for r_key, r in RECIPES.items():
+        if key in (r["module"].lower(), r["name"].lower(), r["operator"].lower()):
+            return r
+        if r_key in key or key in r_key:
+            return r
+    return None
+
+
+def list_recipes() -> list[dict]:
+    """Return all verified add-on recipes."""
+    return list(RECIPES.values())
+
+
+def recipes_for_installed() -> list[dict]:
+    """Return verified recipes matching currently installed or enabled add-ons."""
+    import bpy
+    prefs = getattr(bpy, "context", None)
+    pref_addons = getattr(getattr(prefs, "preferences", None), "addons", {}) if prefs else {}
+    enabled_keys = set(pref_addons.keys()) if hasattr(pref_addons, "keys") else set()
+    matched = []
+    for key, recipe in RECIPES.items():
+        if key in enabled_keys or recipe["module"] in enabled_keys:
+            matched.append(recipe)
+        elif any(key in k.lower() or recipe["module"] in k.lower() for k in enabled_keys):
+            matched.append(recipe)
+    return matched
+
+
+def validate_recipe(recipe_or_key: str | dict, test_run: bool = False) -> dict:
+    """Validate an add-on recipe in the live Blender environment.
+
+    Checks:
+    1. Operator availability in bpy.ops
+    2. RNA arguments validity via get_rna_type()
+    3. Mode and poll() readiness
+    """
+    import bpy
+
+    recipe = get_recipe(recipe_or_key) if isinstance(recipe_or_key, str) else recipe_or_key
+    if not isinstance(recipe, dict):
+        return {"verified": False, "reason": f"Recipe {recipe_or_key!r} not found"}
+
+    op_str = recipe.get("operator", "")
+    res = {
+        "module": recipe.get("module"),
+        "operator": op_str,
+        "verified": False,
+        "operator_available": False,
+        "rna_valid": False,
+        "mode_ok": False,
+        "poll_ok": False,
+        "reason": "",
+    }
+
+    # 1. Parse operator name (e.g. 'bpy.ops.uv.zenuv_unwrap')
+    parts = op_str.replace("bpy.ops.", "").split(".")
+    if len(parts) != 2:
+        res["reason"] = f"Invalid operator identifier: {op_str}"
+        return res
+
+    submod_name, func_name = parts[0], parts[1]
+    ops_module = getattr(getattr(bpy, "ops", None), submod_name, None)
+    if ops_module is None or not hasattr(ops_module, func_name):
+        res["reason"] = f"Operator {op_str} not available in bpy.ops"
+        return res
+
+    res["operator_available"] = True
+    op_callable = getattr(ops_module, func_name)
+
+    # 2. Check RNA properties
+    rna_type = None
+    try:
+        rna_type = op_callable.get_rna_type() if hasattr(op_callable, "get_rna_type") else None
+    except (AttributeError, RuntimeError):
+        pass
+
+    if rna_type is not None:
+        props = getattr(rna_type, "properties", {})
+        prop_keys = {p.identifier for p in props} if hasattr(props, "__iter__") else set()
+        res["rna_valid"] = True
+        res["properties"] = sorted(prop_keys)
+    else:
+        res["rna_valid"] = True
+
+    # 3. Check Mode
+    req_mode = recipe.get("mode", "OBJECT")
+    current_mode = getattr(getattr(bpy, "context", None), "mode", "OBJECT")
+    res["mode_ok"] = (req_mode == current_mode)
+
+    # 4. Check poll()
+    poll_func = getattr(op_callable, "poll", None)
+    if callable(poll_func):
+        try:
+            res["poll_ok"] = bool(poll_func())
+        except (RuntimeError, TypeError, AttributeError):
+            res["poll_ok"] = False
+    else:
+        res["poll_ok"] = True
+
+    res["verified"] = bool(res["operator_available"] and res["rna_valid"])
+    if not res["verified"] and not res["reason"]:
+        res["reason"] = "Operator failed RNA validation"
+    return res
+
+
+def get_verified_recipes(filter_installed: bool = True) -> list[dict]:
+    """Return all recipes that have passed live validation."""
+    candidates = recipes_for_installed() if filter_installed else list_recipes()
+    verified = []
+    for r in candidates:
+        val = validate_recipe(r)
+        if val.get("verified"):
+            verified.append({**r, "validation": val})
+    return verified

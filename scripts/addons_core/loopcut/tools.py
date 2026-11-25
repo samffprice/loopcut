@@ -16,8 +16,6 @@ from typing import Callable
 
 import bpy
 
-from . import open_file, result_store, scratch
-
 MAX_OUTPUT_CHARS = 8000
 CAPTURE_WIDTH = 640  # Image tokens scale with pixels; 640 still shows shape, placement and contact.
 NAMES_LIMIT = 400    # Names get_scene_info lists when rows do not fit; past this, narrow the question.
@@ -66,6 +64,9 @@ class ToolResult:
     converted: str = ""  # image_to_3d done on a picture Loopcut made: the job that made it (agent._turned_into_3d).
     unapplied: str = ""  # A finished job whose outputs did not land (another file open): its id (cloud.apply_finished).
     input_mistake: bool = False  # Refused for the model's arguments (InputMistake): a plain card, the text behind its toggle.
+
+
+from . import open_file, result_store, scratch
 
 
 SCHEMAS = [  # Sent with every request: every word here is paid for on every step.
@@ -215,7 +216,7 @@ SCHEMAS = [  # Sent with every request: every word here is paid for on every ste
 # it exports (engine_export.py), so it takes a checkpoint first.
 CHANGES_SCENE = {"run_python", "import_asset", "frame_camera", "delegate", "accept_quarantine", "uv_unwrap",
                  "transfer_textures", "bake_paint_masks", "stylize_material", "apply_build",
-                 "clip_background", "character_rig",  # A camera background and the scene's frame rate (video_attach.py).
+                 "clip_background", "character_rig", "studio_action",  # A camera background and the scene's frame rate (video_attach.py).
                  "export_for_engine", "add_detail_normal"}  # add_detail_normal: material nodes (detail_maps.py).
 NEEDS_APPROVAL = CHANGES_SCENE
 # Tools since merged into one with a `source` or an `action`: old name -> (current name, the
@@ -243,7 +244,7 @@ RENAMED = {
 # UV and pixel edits are not in scene_diff, but they come from run_python or uv_unwrap, and any call
 # to a scene-changing tool starts the reads over (agent.run_loop).
 SAME_WHILE_UNCHANGED = {"get_scene_info", "get_object_info", "inspect_api", "look_at_reference", "search_assets",
-                        "check_contact", "inspect_uv", "inspect_texture", "check_shading", result_store.TOOL}
+                        "check_contact", "inspect_uv", "inspect_texture", "check_shading", "studio_guide", result_store.TOOL}
 # Code that renders, bakes or simulates can hold Blender for minutes. Such a step waits for the
 # user unless they said "Always allow renders": "Always allow" and auto-run do not cover it.
 # Not render.render: the cost guard refuses it in the code whatever the user allows
@@ -286,6 +287,8 @@ def installs_code(text: str) -> bool:
 
 def installs(name: str, arguments: dict) -> bool:
     """A step whose own text installs or fetches-and-runs code: it asks even when other steps run unasked."""
+    if name == "studio_action" and isinstance(arguments.get("command"), str) and arguments["command"] in studio.EXTERNAL_EXECUTION:
+        return True
     field = {"run_python": "code", "shell": "command"}.get(name)
     return bool(field) and installs_code(str(arguments.get(field, "")))
 
@@ -293,12 +296,15 @@ def installs(name: str, arguments: dict) -> bool:
 def only_reads(name: str, arguments: dict) -> bool:
     """A call to a scene-changing tool that only measures: frame_camera with report_only. It takes
     no checkpoint, needs no go-ahead, and counts as a read (SAME_WHILE_UNCHANGED)."""
-    return (name == "frame_camera" and str(arguments.get("report_only")).lower() == "true"
+    return (name == "studio_action" and studio.only_reads(arguments.get("command"))
+            or name == "frame_camera" and str(arguments.get("report_only")).lower() == "true"
             or name == "character_rig" and arguments.get('action') in ('inspect', 'check_deformation'))
 
 
 def is_heavy(name: str, arguments: dict) -> bool:
     """A step that renders, bakes or simulates: it asks even when other steps run unasked."""
+    if name == "studio_action":
+        return isinstance(arguments.get("command"), str) and arguments["command"] in studio.HEAVY
     if name == "run_python":
         return bool(HEAVY_CODE.search(str(arguments.get("code", ""))))
     if name == "render_job":
@@ -1453,6 +1459,8 @@ def set_extras(mode: str) -> ToolResult:
     return ToolResult(f'Saved: paid extras "{label}". The user can change it in Preferences.')
 
 
+from . import studio
+
 _DISPATCH = {
     "open_file": open_file.open_file,
     "run_python": run_python,
@@ -1463,6 +1471,7 @@ _DISPATCH = {
     "compare_with_reference": compare_with_reference_tool,
     "look_at_reference": look_at_reference,
     "set_extras": set_extras,
+    **studio.DISPATCH,
 }
 
 
@@ -1533,11 +1542,15 @@ def execute(name: str, arguments_json: str) -> ToolResult:
         if not isinstance(arguments, dict):
             raise ValueError("arguments must be a JSON object")
     except ValueError as ex:
-        return ToolResult(f"Invalid tool arguments: {ex}", ok=False, plan_refused=name == "delegate", input_mistake=True)
+        from . import tool_repair
+        repair_msg = tool_repair.build_argument_repair_prompt(name, str(ex))
+        return ToolResult(f"Invalid tool arguments: {ex}\n\n{repair_msg}", ok=False, plan_refused=name == "delegate", input_mistake=True)
     try:
         inspect.signature(fn).bind(**arguments)
     except TypeError as ex:
-        return ToolResult(f"Bad arguments for {name}: {ex}", ok=False, plan_refused=name == "delegate", input_mistake=True)
+        from . import tool_repair
+        repair_msg = tool_repair.build_argument_repair_prompt(name, str(ex))
+        return ToolResult(f"Bad arguments for {name}: {ex}\n\n{repair_msg}", ok=False, plan_refused=name == "delegate", input_mistake=True)
     _undo_owed.append("")
     try:
         return fn(**arguments)

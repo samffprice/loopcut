@@ -214,6 +214,9 @@ def enabled() -> bool:
     """Main thread: the preference, the environment switch, and an interactive Blender."""
     if env_off() or _stopped:
         return False
+    from . import privacy
+    if privacy.is_privacy_mode_enabled():
+        return False
     try:
         import bpy
         if getattr(bpy.app, "background", True):
@@ -405,7 +408,7 @@ def outcome_of(outcome: str, code: str | None = None) -> tuple[str, str | None]:
         return "cancelled", code
     if code == "empty_reply":
         return "empty", code
-    return "error", code or (outcome if outcome in ("step_limit", "no_progress", "budget") else "internal")
+    return "error", code or (outcome if outcome in ("step_limit", "no_progress", "budget", "incomplete") else "internal")
 
 
 def turn_end(turn, items: list) -> None:

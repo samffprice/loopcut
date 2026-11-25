@@ -1,148 +1,269 @@
 <p align="center">
-  <a href="https://loopcut.org">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset=".github/readme/lockup-dark.png">
-      <img alt="Loopcut" src=".github/readme/lockup-light.png" width="340">
-    </picture>
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/readme/lockup-dark.png">
+    <img alt="Loopcut" src=".github/readme/lockup-light.png" width="340">
+  </picture>
 </p>
 
-<h3 align="center">You're the artist. Loopcut's the technician.</h3>
+<h3 align="center">Autonomous AI Agent inside Blender 5.2 — Local AI & Studio Edition</h3>
 
 <p align="center">
-  An open-source AI agent inside Blender. Describe the technical work in a sentence; Loopcut writes and runs the Python, shows you every step, checks the viewport, and leaves the creative decisions to you.
-</p>
-
-<p align="center">
-  <a href="https://loopcut.org">Website</a> ·
-  <a href="https://github.com/Samffprice/loopcut/releases/latest">Download</a> ·
-  <a href="#install">Install</a> ·
-  <a href="#your-model-or-ours">Models</a> ·
-  <a href="loopcut/DEVELOPING.md">Developer guide</a> ·
-  <a href="https://loopcut.org/pricing">Pricing</a>
+  Describe 3D tasks in plain English. Loopcut reasons, writes and verifies Blender Python, confirms destructive actions, captures the viewport to evaluate results, and executes with one-click checkpoint rollback.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Samffprice/loopcut/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Samffprice/loopcut?style=flat-square&color=4a95a3&label=release"></a>
-  <a href="https://github.com/Samffprice/loopcut/actions/workflows/tests.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/Samffprice/loopcut/tests.yml?branch=main&style=flat-square&label=tests"></a>
-  <a href="https://github.com/Samffprice/loopcut/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Samffprice/loopcut/total?style=flat-square&color=df8b37"></a>
-  <img alt="Blender 5.2" src="https://img.shields.io/badge/Blender-5.2-4a95a3?style=flat-square">
-  <img alt="macOS and Windows" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-2a2a2e?style=flat-square">
+  <a href="#key-features--enhancements">Features</a> ·
+  <a href="#quick-start--installation">Install</a> ·
+  <a href="#building-from-source-linux">Build from Source</a> ·
+  <a href="#model-providers--configuration">Models</a> ·
+  <a href="#studio-tools--playbooks">Studio Tools</a> ·
+  <a href="#local-evaluations--skills">Local Evals</a> ·
+  <a href="#testing">Testing</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/0xra0/loopcut/releases/latest"><img alt="Latest Release" src="https://img.shields.io/github/v/release/0xra0/loopcut?style=flat-square&color=4a95a3&label=release"></a>
+  <img alt="Blender 5.2.2 LTS" src="https://img.shields.io/badge/Blender-5.2.2%20LTS-4a95a3?style=flat-square">
+  <img alt="Platforms: Linux | macOS | Windows" src="https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-2a2a2e?style=flat-square">
+  <img alt="Default Local AI: Strata Swift 1.5" src="https://img.shields.io/badge/local%20AI-Strata%20Swift%201.5-brightgreen?style=flat-square">
+  <img alt="Privacy: Local First" src="https://img.shields.io/badge/privacy-local%20first-blue?style=flat-square">
   <a href="LICENSE"><img alt="License: GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-2a2a2e?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="https://loopcut.org"><img alt="Loopcut inside Blender: a three-point light rig set up from one message, with the scene changes listed and one click to undo them" src=".github/readme/hero.webp" width="960"></a>
+  <img alt="Loopcut inside Blender" src=".github/readme/hero.webp" width="960">
 </p>
 
-## What it does
+---
 
-- **The technical work, in a sentence.** Rename by material, sort into collections, fix normals, stack modifiers in the right order, wire constraints and drivers, unwrap and pack, build a light rig, set up render presets, batch export. Each of these is one message.
-- **Every step on screen.** The code for each step waits for your approval before it runs (or you tell it to stop asking for this conversation). Its result is measured from the scene, not from what the model printed, so a "Scene changes" card lists exactly what was added, removed and changed.
-- **It looks at its work.** The agent captures the viewport to check itself, and can put a reference photo you dropped on the panel next to a capture to compare and adjust.
-- **One click back.** Every turn that changes the scene is a checkpoint. *Undo all* restores the scene and the conversation to before it. Your .blend is never written to; a restore lands in place, with the file still yours.
-- **It knows the scene.** File, mode, selection and objects ride with every message, so "make this shinier" works. Type `@Name` to point at an object, material or collection. Installed add-ons are in its view, and it can use them.
-- **Your model or ours.** Bring a key from Anthropic or any OpenAI-compatible provider, run a model on your own GPU, or sign in for hosted models with nothing to set up.
-- **It's Blender.** Loopcut is Blender 5.2 with a panel and about forty changed files. Import your settings, add-ons, keymap and themes on first launch and carry on. It updates itself.
+## What is Loopcut?
 
-## Install
+**You're the artist. Loopcut's the technician.**
 
-Grab the latest build from the [releases page](https://github.com/Samffprice/loopcut/releases/latest) or [loopcut.org/download](https://loopcut.org/download).
+Loopcut integrates a specialized autonomous AI agent directly into Blender 5.2. Instead of writing boilerplate scripts, debugging API changes, or manually clicking through nested modifier stacks and topology operations, describe your technical objective in a sentence. Loopcut:
 
-| Platform | File | Notes |
+1. **Inspects the Scene**: Queries active meshes, modifier stacks, materials, geometry node trees, constraints, animation data, and camera framing in bulk.
+2. **Generates & Normalizes Code**: Produces exact Blender 5.2 Python actions with automatic syntax normalization and repair for complex tool arguments.
+3. **Requests Approval for Destructive Steps**: Shows code diffs and waits for your consent before executing changes.
+4. **Verifies Viewport & Evaluated Meshes**: Captures the viewport from optimal angles and compares against reference images or geometric invariants.
+5. **Enables Instant Rollback**: Creates non-destructive undo checkpoints before every turn without modifying your saved `.blend` file.
+
+---
+
+## Key Features & Modifications in this Edition
+
+This fork enhances the upstream Loopcut release with offline local intelligence, advanced studio toolsets, privacy protections, and dedicated Linux build improvements:
+
+### 1. Local AI by Default (Strata Swift 1.5)
+- **Zero Cloud Dependence**: Configured out of the box to communicate with **Strata** (Swift 1.5 on Strata's engine at `127.0.0.1:8099`) as the primary provider and fallback.
+- **Thinking Mode Selector**: Switch between **Fast** (low reasoning effort), **Balanced** (medium reasoning effort), and **Deep** (high reasoning effort) directly from the N-panel.
+- **Non-blocking Health Check**: Added a *Test Strata* button and real-time status reporting that will never hang or block Blender's UI thread during drawing.
+
+### 2. Antigravity CLI (AGY) Integration
+- Direct native support for the **Antigravity CLI (AGY)** provider (`scripts/addons_core/loopcut/agy_cli.py`).
+- Automatic argument repair for tool calls: automatically fixes `run_python` calls containing literal newlines or escaped formatting artifacts common in local LLM tool responses.
+
+### 3. Claude Blender Integration & Studio Tools
+- Embedded command handlers from the Claude Blender Integration suite without requiring extra localhost sockets or MCP daemons for chat:
+  - **`studio_guide`**: Browse structured command groups, inspect parameters, docstrings, and run staged playbooks (`retopo_and_bake`, `refine_generated`, `mesh_report`).
+  - **`studio_action`**: Execute advanced studio handlers on Blender's main thread with full scene diffing and Loopcut undo checkpoints.
+  - **Specialized Toolsets**: Fast Sculpting (`fast_sculpt`), Hard Surface booleans & bevels (`hard_surface`), Quad Retopology (`retopo_tools`), Geometry Nodes orchestration (`geonodes_controller`), and Rigging & Animation (`rig_anim_controller`).
+
+### 4. Pixal3D Multiview 3D Pipeline
+- Bundled Pixal3D multiview generation pipeline for turning multi-angle image references into initial 3D mesh representations inside Blender.
+
+### 5. Local Privacy by Default
+- Usage telemetry and conversation log sharing are disabled by default (`scripts/addons_core/loopcut/privacy.py`). Your scenes, reference photos, geometry, and conversation data remain strictly on your local machine.
+
+### 6. Dynamic Add-on Discovery & Reach
+- Detects installed Blender add-ons that are disabled and counts them per request.
+- The agent can search disabled add-ons via `inspect_api` and dynamically activate an add-on for the current session when needed, without permanently changing your Blender startup configuration.
+
+### 7. Linux System Glog & Build Fixes
+- Fixes dual-glog / gflags symbol collision crashes (`-DWITH_SYSTEM_GLOG=ON`, `-DWITH_SYSTEM_GFLAGS=ON`).
+- Includes a turn-key build automation script (`build-loopcut.sh`) that cleanly handles headless builds, Python `bpy` modules, and full GUI Blender with AMD ROCm / HIP support.
+
+---
+
+## Quick Start & Installation
+
+### Option A: Download GitHub Release
+Pre-packaged release builds are available on the [Releases page](https://github.com/0xra0/loopcut/releases):
+
+| Platform | Package | Notes |
 |---|---|---|
-| macOS (Apple silicon) | `loopcut-<version>-arm64.dmg` | Drag to Applications. |
-| Windows (64-bit) | `loopcut-<version>-windows64.msi` or `.zip` | The installer, or unzip anywhere. |
+| **Linux (x86_64)** | `loopcut-linux-x86_64.tar.gz` | Includes standalone Blender GUI binary with local AI enhancements. |
+| **Linux Patches & Scripts** | `build-loopcut.sh`, `fix-loopcut-glog-v2.sh` | Turn-key scripts for building from source on any modern distribution. |
 
-The builds are not yet signed, so the first launch needs one extra click:
+### Option B: Building from Source (Linux)
 
-- **macOS** says it "could not verify" Loopcut. Click *Done*, then *System Settings → Privacy & Security → Open Anyway*. Or, in Terminal: `xattr -dr com.apple.quarantine /Applications/Loopcut.app`.
-- **Windows** shows a SmartScreen warning. *More info → Run anyway*.
+Use the included `build-loopcut.sh` script to configure and compile in isolated directories:
 
-On first launch, choose *Import Blender 5.2 Settings* to bring over your preferences, add-ons, keymap, themes and startup file, or *Start Fresh*. Then connect a model and you're in. The panel docks to the right of the 3D viewport; <kbd>⌘</kbd><kbd>L</kbd> (<kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>L</kbd> on Windows) focuses it.
+```bash
+# 1. Clone the repository
+git clone https://github.com/0xra0/loopcut.git
+cd loopcut
 
-Later updates install from inside the app ("Restart to update") and never trigger the warning again.
+# 2. Build full GUI Blender (adjust -j for CPU cores)
+./build-loopcut.sh --full -j $(nproc)
 
-## Your model or ours
+# 3. Test built executable
+./build-full-glogfix/bin/blender --version
 
-| | |
+# 4. (Optional) Run the Blender-free test suite
+./build-loopcut.sh --tests
+
+# 5. Launch Loopcut
+./build-full-glogfix/bin/blender
+```
+
+#### Additional Build Profiles:
+```bash
+# Build headless Blender (for batch rendering / CI)
+./build-loopcut.sh --headless -j 8
+
+# Build the Python 'bpy' standalone module
+./build-loopcut.sh --py -j 8
+
+# Build all three profiles with AMD HIP/ROCm acceleration
+./build-loopcut.sh --all --hip on -j 8
+
+# Preview build commands without running
+./build-loopcut.sh --dry-run
+```
+
+---
+
+## How to Use Loopcut
+
+### 1. First Launch & Setup
+1. Launch Loopcut Blender.
+2. In the splash screen, select **Import Blender 5.2 Settings** to migrate your existing preferences, keymaps, and add-ons, or choose **Start Fresh**.
+3. Open the 3D Viewport. The Loopcut panel is docked on the right side of the viewport. Toggle it anytime with <kbd>Ctrl</kbd> + <kbd>L</kbd> (or <kbd>⌘</kbd> + <kbd>L</kbd> on macOS).
+
+### 2. Configure Your AI Engine
+In the Loopcut panel header or under *Preferences › Add-ons › Loopcut*:
+- **Local Strata (Default)**: Ensure Strata is running on port 8099 (`http://127.0.0.1:8099/v1`). Click **Test Strata** to verify connectivity. Select your preferred Thinking Mode (*Fast*, *Balanced*, or *Deep*).
+- **Antigravity CLI (AGY)**: Select the AGY provider to route commands through your local Antigravity installation.
+- **Custom / Cloud Models**: You can also enter an API key for Anthropic (Claude 3.5 Sonnet / Opus) or any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM, OpenRouter).
+
+### 3. Example Workflows & Prompts
+
+#### Modeling & Modifiers
+```
+Create a medieval wooden chest: bevel the edges, add iron strap bands with mirror modifiers, and ensure transform origins are at the base.
+```
+```
+Clean up non-manifold geometry, merge vertices within 0.001m, and recalculate all normals facing outward.
+```
+
+#### Studio Tools & Retopology
+```
+Inspect the active character mesh with studio_guide, run the retopo_and_bake playbook, and generate an 8k normal map from high-poly sculpt details.
+```
+```
+Use studio_action to apply a subdivision remesh on the active sculpt and unwrap seams along sharp edges.
+```
+
+#### Lighting, Camera & Scene Setup
+```
+Match the camera framing to the reference photo I dropped in, and set up a three-point softbox studio lighting rig with warm key light and cool rim light.
+```
+```
+Sort all mesh objects in the scene into collections by material, and stack Bevel before Subdivision Surface across Props.
+```
+
+#### Procedural & Geometry Nodes
+```
+Create a Geometry Nodes tree on the selected plane that distributes pebbles and grass instances with random scale and rotation seeded by vertex weight.
+```
+
+---
+
+## Studio Tools & Playbooks
+
+This edition vendors the **Claude Blender Integration** commands under `scripts/addons_core/loopcut/studio_vendor/`:
+
+| Command / Tool | Purpose |
 |---|---|
-| **Bring your own key** | Paste a key from Anthropic (Claude, with prompt caching) or any OpenAI-compatible provider. It stays on your machine, in a user-only file, and requests go straight to them. No account needed. |
-| **Run it locally** | Point Loopcut at a model on your own GPU (Ollama, LM Studio, llama.cpp, vLLM…). Works offline; nothing leaves the building. |
-| **Hosted by Loopcut** | Sign in from the app and start. *Fast* and *Pro* modes on models picked for Blender work. Free tier included; see [pricing](https://loopcut.org/pricing). |
+| `studio_guide(toolset="...")` | Lists commands and signatures for `look`, `modeling`, `topology`, `sculpt`, `uv_bake`, `materials`, `rig`, `animate`, or `export`. |
+| `studio_guide(playbook="...")` | Retrieves multi-step execution playbooks (`retopo_and_bake`, `refine_generated`, `mesh_report`). |
+| `studio_action(command, params)` | Dispatches validated operations with automatic undo checkpointing and scene diff calculation. |
+| `fast_sculpt` / `sculpt_controller` | High-performance stroke injection, remeshing, and dynamic topology manipulation. |
+| `hard_surface` | Boolean solver automation, chamfers, weighted normals, and non-destructive modifier stacks. |
+| `geonodes_controller` | Programmatic node tree synthesis, socket wiring, and exposed attribute bindings. |
 
-With your own key or a local model, nothing touches our servers. With hosted models, the gateway relays the request and keeps token counts for billing, not prompts or scenes.
+---
 
-## What to ask it
+## Local Evaluations & Skills
 
-```
-Rename everything after what it is, put the lights in their own collection, and set up a three-point rig around the bottle.
-```
-```
-Apply scale on everything, fix the flipped normals, and purge orphan data.
-```
-```
-Add an IK chain to the legs with pole targets, and mirror the naming to .L/.R.
-```
-```
-Match the framing of the reference photo I attached and set up a product-shot render preset at 2048².
-```
-```
-Sort the modifier stack so Mirror comes before Subdivision on every mesh in Props.
-```
+### Running Local Evals
+Loopcut includes a benchmark harness under `loopcut/harness/local_evals/` designed to evaluate offline local models against concrete 3D modeling tasks:
 
-## How a turn works
+```bash
+# Verify all task evaluations against ground-truth references (no model needed; ~5s)
+./build-full-glogfix/bin/blender -b --factory-startup --python-exit-code 1 --python loopcut/harness/local_evals/selfcheck.py
 
-The model works with a small set of tools, and each one is built to tell the truth about the scene:
+# Evaluate a local model on port 8099
+python3 loopcut/harness/local_evals/run.py --label "Strata Swift 1.5 + skills"
 
-| Tool | What it's for |
-|---|---|
-| `run_python` | Change the scene. The result ends with the scene diff, measured after the run, and can carry a viewport capture in the same reply. |
-| `get_scene_info` / `get_object_info` | What's in the scene, and how an object is set up: modifiers, material and geometry node trees, constraints, animation. |
-| `inspect_api` | The Python API of the running Blender, with tested notes where recent versions differ from what models remember. |
-| `capture_viewport` | A self-framed look at the scene from a chosen angle and shading style, and which objects are nearest. |
-| `compare_with_reference` / `look_at_reference` | Your attached image beside a capture, or a region of it at full resolution. |
-
-Drop images on the panel (or *+ image*) to attach up to six references per message. They are stored beside the conversation, never inside your .blend.
-
-Conversations survive restarts and belong to the file they worked in; *History* lists the others, *New chat* starts fresh. Long sessions stay affordable: older steps are folded, and the model summarizes when needed, so the context shown in the footer stays within budget.
-
-Loopcut keeps a text log of each conversation for 90 days to fix problems and improve the app: no images, .blend files or keys, and never used for training. Turn it off with *Share conversations to improve Loopcut* in *Preferences › Add-ons › Loopcut › Privacy and Support*, where *Report a Problem…* sends us a note (and, if you like, your latest conversations) and gives you a code to quote.
-
-## Building from source
-
-Loopcut is a fork of [Blender](https://projects.blender.org/blender/blender) 5.2.2 on the `main` branch. The add-on lives in `scripts/addons_core/loopcut/` and hot-reloads; the fork adds an editor type, in-place snapshot restore, a separate settings folder, and its own name and icons.
-
-```
-make update                       # fetches Blender's libraries from projects.blender.org
-ninja -C ../build/lite install    # the dev build; the same command re-copies the add-on after Python-only changes
-python3 -m unittest discover -s loopcut/tests
+# Evaluate specific tasks
+python3 loopcut/harness/local_evals/run.py longsword uv_unwrap
 ```
 
-The [developer guide](loopcut/DEVELOPING.md) covers the layout, the dev loop, the harness and eval suite, releases, and how checkpoints, conversations and context management work inside.
+### Custom Craft Skills
+Domain-specific modeling knowledge is stored as modular Markdown skills in `local-skills/`:
+- `blender-52-api.md`: Up-to-date Python API patterns for Blender 5.2.
+- `geometry-nodes.md`: Recipes and node type hierarchies for procedural setups.
+- `redengine-export.md`: Constraints and hierarchy conventions for game asset export.
 
-## Contributing
+---
 
-Issues and pull requests are welcome. The fast loop is `loopcut/scripts/dev.sh` (Blender stays open, saving a file reloads the panel) and `python3 -m unittest discover -s loopcut/tests` runs without Blender. The Blender-free tests run on every push.
+## Testing
 
-## Bundled add-ons
+Over 4,700 unit tests verify the agent loop, context compression, checkpoint safety, and tool handlers without requiring a GUI:
 
-Loopcut includes unmodified, optional System extensions, disabled until needed:
-[UniV](https://extensions.blender.org/add-ons/univ/) by Oxicid (GPL-3.0-or-later);
-[LoopTools](https://extensions.blender.org/add-ons/looptools/) by Bart Crouch and Vladimir Spivak,
-maintained by the community (GPL-2.0-or-later);
-[Node Arrange](https://extensions.blender.org/add-ons/node-arrange/) maintained by Leonardo Pike-Excell
-(GPL-3.0-or-later, with NetworkX under BSD-3-Clause);
-[MPFB](https://extensions.blender.org/add-ons/mpfb/) maintained by Joel Palmius and the MakeHuman
-community (code GPL-3.0-or-later; included assets CC0 1.0; additional asset packs are not bundled);
-and [Bool Tool](https://extensions.blender.org/add-ons/bool-tool/) maintained by Nika Kutsniashvili,
-with its upstream contributors (GPL-3.0-or-later). Full credits and pinned versions are in
-[bundled.json](release/extensions/bundled.json), with [licence texts](release/extensions/licenses/)
-and the shipped Python sources in [the System repository](release/extensions/system/).
-These packages contain no compiled components; Node Arrange's bundled NetworkX wheel is pure Python.
+```bash
+# Run all loopcut unit tests
+python3 -m unittest discover -s loopcut/tests -v
 
-## License and name
+# Run targeted local AI & studio test suites
+python3 -m unittest loopcut/tests/test_local_ai_and_advanced_suite.py
+python3 -m unittest loopcut/tests/test_agy.py
+python3 -m unittest loopcut/tests/test_studio_integration.py
+```
 
-The code is Blender's and ours together, under the GNU General Public License v3 or later, like Blender ([LICENSE](LICENSE) has the full text; [COPYING](COPYING), [doc/license/](doc/license/)). That includes the add-on: it is written against Blender's Python API and ships inside the app. The hosted model service is separate work in its own repository.
+---
 
-The license covers the code, not the name. "Loopcut" and the Loopcut mark ([release/loopcut/](release/loopcut/)) identify this product, and the GPL grants no right to use them; a fork of this repository needs its own name and icons, exactly as this one does not use Blender's. Blender is a trademark of the Blender Foundation. Loopcut is based on Blender and is not affiliated with or endorsed by the Blender Foundation.
+## Repository Structure
+
+```
+├── build-loopcut.sh               # Turn-key Linux build script (headless, bpy, full)
+├── fix-loopcut-glog-v2.sh         # System glog / gflags duplicate symbol fix script
+├── local-skills/                  # Custom domain knowledge skills for local models
+├── loopcut/
+│   ├── CLAUDE_BLENDER_INTEGRATION.md  # Studio tools integration guide
+│   ├── DEVELOPING.md              # Developer architecture documentation
+│   ├── harness/                   # Local evaluations & distillation pipelines
+│   │   └── local_evals/           # 13 verified scene benchmark tasks
+│   └── tests/                     # 4,700+ offline unit tests
+├── scripts/addons_core/loopcut/   # Main Loopcut Blender add-on source
+│   ├── agent.py                   # Multi-turn reasoning loop & consent handling
+│   ├── agy_cli.py                 # Antigravity CLI provider implementation
+│   ├── llm.py                     # Provider adapters (Strata, OpenAI, Anthropic)
+│   ├── privacy.py                 # Local privacy enforcement
+│   ├── studio_vendor/             # Claude Blender Integration command handlers
+│   └── tools.py                   # Python runner, scene inspection & viewport tools
+├── source/                        # Blender 5.2 C/C++ core fork
+└── release/                       # UI branding, bundled extensions & presets
+```
+
+---
+
+## License & Credits
+
+- **Loopcut & Blender Core**: Licensed under the **GNU General Public License v3.0 or later** ([LICENSE](LICENSE)).
+- **Claude Blender Integration Handlers**: Licensed under the **MIT License** ([scripts/addons_core/loopcut/studio_vendor/LICENSE](scripts/addons_core/loopcut/studio_vendor/LICENSE)).
+- **Bundled Extensions**: Shipped under their respective open-source licenses (GPL / MIT / BSD) as documented in `release/extensions/bundled.json`.
+
+*Blender is a registered trademark of the Blender Foundation. Loopcut is an independent fork based on Blender and is not endorsed by or affiliated with the Blender Foundation.*

@@ -663,8 +663,18 @@ def stream_chat(
         body["tools"] = tools
     if max_tokens:
         body["max_tokens"] = max_tokens
-    from . import config, image_budget
-    service = config.on_service(base_url)
+    from . import aipass, config, image_budget
+    wallet = base_url == aipass.PROVIDER_URL
+    if wallet:
+        if is_cancelled():
+            raise Cancelled()
+        try:
+            wallet_client, api_key = aipass.authorization(api_key)
+        except (aipass.WalletError, OSError) as ex:
+            message = str(ex) if isinstance(ex, aipass.WalletError) else "Couldn't read the AI Pass connection."
+            raise LLMError(message, code="aipass_connection") from None
+        base_url, retry_delays, on_retry = aipass.API_BASE, (), None
+    service = config.on_service(base_url) and not wallet
     request_headers = {name: value for name, value in (headers or {}).items()
                        if name.lower() != "x-loopcut-prompt"
                        and (service or not name.lower().startswith("x-loopcut-"))}
@@ -691,7 +701,15 @@ def stream_chat(
         if gateway and not _gzip_refused:
             import gzip
             data, sent = gzip.compress(data, 6, mtime=0), {**request_headers, "Content-Encoding": "gzip"}
-        return urllib.request.Request(f"{base_url}/chat/completions", data=data, headers=sent, method="POST")
+        if wallet:
+            sent = {key: value for key, value in sent.items() if key.lower() not in
+                    ("authorization", "x-aipass-oauth-client-id")}
+        request = urllib.request.Request(f"{base_url}/chat/completions", data=data, headers=sent, method="POST")
+        if wallet:
+            # Keep wallet credentials on the original HTTPS request, even if the server redirects.
+            request.add_unredirected_header("Authorization", f"Bearer {api_key}")
+            request.add_unredirected_header("X-aipass-oauth-client-id", wallet_client)
+        return request
     deadline = (time.monotonic() + call_max_seconds
                 if call_max_seconds and not _is_loopback(base_url) else None)
     # Two separate, small budgets: before any content this attempt, the same capped backoff as a

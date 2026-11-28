@@ -528,9 +528,9 @@ _PAGE = ("<!doctype html><meta charset=utf-8><title>Loopcut</title><body style=\
 
 class _CallbackServer:
     """One-shot loopback listener for the authorization redirect. Prefers port 1455, else any free
-    port; the path is always /auth/callback. Requests to other paths get a 404 and are ignored."""
+    port unless the provider requires an exact registered callback. Other paths get a 404."""
 
-    def __init__(self, port: int = PREFERRED_PORT):
+    def __init__(self, port: int = PREFERRED_PORT, *, allow_fallback: bool = True):
         owner = self
         self.result: dict | None = None
         self.expected_state = ""
@@ -541,8 +541,9 @@ class _CallbackServer:
                 if parsed.path != CALLBACK_PATH:
                     self.send_error(404)
                     return
-                query = {k: v[0] for k, v in urllib.parse.parse_qs(parsed.query).items()}
-                if not hmac.compare_digest(query.get("state", ""), owner.expected_state):
+                query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+                states = query.get("state", ())
+                if len(states) != 1 or not hmac.compare_digest(states[0].encode(), owner.expected_state.encode()):
                     self._page(400, "Sign-in not recognised", "This page did not come from the sign-in Loopcut "
                                "started. Go back to Loopcut and try again.")
                     return
@@ -550,7 +551,7 @@ class _CallbackServer:
                     self._page(200, "Sign-in stopped", "Loopcut was not given access. You can close this tab.")
                 else:
                     self._page(200, "Signed in to Loopcut", "You can close this tab and go back to Blender.")
-                owner.result = query
+                owner.result = {k: v[0] for k, v in query.items() if len(v) == 1}
 
             def _page(self, status: int, title: str, text: str):
                 body = _PAGE.format(title=title, text=text).encode("utf-8")
@@ -567,6 +568,8 @@ class _CallbackServer:
         try:
             self.server = HTTPServer(("127.0.0.1", port), Handler)
         except OSError:
+            if not allow_fallback:
+                raise
             self.server = HTTPServer(("127.0.0.1", 0), Handler)
         self.server.timeout = 0.25
         self.redirect_uri = f"http://127.0.0.1:{self.server.server_address[1]}{CALLBACK_PATH}"

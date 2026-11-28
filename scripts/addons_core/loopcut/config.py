@@ -392,7 +392,8 @@ def stall_seconds() -> int:
 
 
 def _check_base_url(base_url: str, key: str) -> None:
-    if base_url == CHATGPT_PLAN_BASE_URL or anthropic(base_url):  # anthropic:// is always sent as https.
+    from . import aipass
+    if base_url in (CHATGPT_PLAN_BASE_URL, aipass.PROVIDER_URL) or anthropic(base_url):
         return
     if not base_url.startswith("https://") and not base_url.startswith("http://127.0.0.1"):
         raise ConfigError(f"{key} must be https (http is allowed only for 127.0.0.1)")
@@ -414,6 +415,13 @@ def load() -> Config:
     model = get("LOOPCUT_MODEL")
     if chatgpt_plan(base_url):
         base_url, api_key, model = CHATGPT_PLAN_BASE_URL, CHATGPT_PLAN_KEY, model or CHATGPT_PLAN_MODEL
+    from . import aipass
+    if base_url == aipass.PROVIDER_URL:
+        api_key = aipass.connection_id()  # A local connection identifier; the transport resolves the token.
+        if not api_key:
+            raise ConfigError("Connect AI Pass in Preferences > Add-ons > Loopcut.")
+        if not model:
+            raise ConfigError("Choose an AI Pass model in Preferences > Add-ons > Loopcut.")
     missing = [k for k, v in (("LOOPCUT_API_KEY", api_key), ("LOOPCUT_BASE_URL", base_url),
                               ("LOOPCUT_MODEL", model)) if not v]
     # Codex runs its own model calls under its own sign-in (codex_app.py): no key or URL needed then.

@@ -13,7 +13,7 @@ import urllib.request
 
 import bpy
 
-from . import account, chatgpt_auth, cloud_account, config, credentials
+from . import account, aipass, chatgpt_auth, cloud_account, config, credentials
 
 PACKAGE = __package__
 
@@ -51,6 +51,9 @@ PROVIDERS = (
     ("KIMI", "Kimi Code (your membership)", "https://api.kimi.ai/coding/v1", "kimi-for-coding",
      "Paste the API key from your Kimi Code console; it uses your own membership quota, and Kimi's rules apply to "
      "your account. In China use Custom with https://api.kimi.com/coding/v1."),
+    ("AIPASS", "AI Pass", aipass.PROVIDER_URL, "",
+     "Model calls use your AI Pass wallet. Prompts, scene details and viewport images go to AI Pass "
+     "and the selected model provider."),
 )
 _BY_ID = {p[0]: p for p in PROVIDERS}
 _models: list[str] = []  # Filled by "Fetch models"; not saved.
@@ -482,6 +485,9 @@ class LoopcutPreferences(bpy.types.AddonPreferences):
         elif self.provider == "CHATGPT":
             from . import chatgpt_ui
             chatgpt_ui.draw(column.column(align=True), self)
+        elif self.provider == "AIPASS":
+            from . import aipass_ui
+            aipass_ui.draw(column, self)
         else:
             if self.provider == "CUSTOM":
                 column.prop(self, "base_url")
@@ -646,6 +652,19 @@ class LOOPCUT_OT_fetch_models(bpy.types.Operator):
                 return {"CANCELLED"}
             _models[:] = found[:200]
             self.report({"INFO"}, f"{len(found)} models; pick one from the menu next to the field")
+            return {"FINISHED"}
+        if prefs is not None and prefs.provider == "AIPASS":
+            try:
+                found = aipass.list_models()
+            except aipass.WalletError as ex:
+                self.report({"ERROR"}, str(ex))
+                return {"CANCELLED"}
+            if not found:
+                self.report({"WARNING"}, "AI Pass listed no models with tool calling and image input.")
+                return {"CANCELLED"}
+            _models[:] = found
+            if prefs.model not in found:
+                prefs.model = found[0]
             return {"FINISHED"}
         if prefs is None or not prefs.base_url:
             self.report({"ERROR"}, "Set the base URL first")
@@ -1046,6 +1065,9 @@ def values() -> dict[str, str]:
                           "LOOPCUT_MODEL": prefs.model or config.CHATGPT_PLAN_MODEL,
                           "LOOPCUT_API_KEY": chatgpt_auth.PLACEHOLDER_KEY})
         return found
+    if prefs.provider == "AIPASS":
+        found.update({"LOOPCUT_BASE_URL": aipass.PROVIDER_URL, "LOOPCUT_MODEL": prefs.model})
+        return found
     base_url = prefs.base_url.rstrip("/")
     key = credentials.api_key(base_url) if base_url else ""
     local = base_url.startswith("http://127.0.0.1")
@@ -1121,15 +1143,17 @@ _CLASSES = (LoopcutPreferences, LOOPCUT_OT_storage_cleanup, LOOPCUT_OT_fetch_mod
 
 
 def register() -> None:
-    from . import chatgpt_ui, own_key_ui
+    from . import aipass_ui, chatgpt_ui, own_key_ui
     for cls in _CLASSES:
         bpy.utils.register_class(cls)
     chatgpt_ui.register()
     own_key_ui.register()
+    aipass_ui.register()
 
 
 def unregister() -> None:
-    from . import chatgpt_ui, own_key_ui
+    from . import aipass_ui, chatgpt_ui, own_key_ui
+    aipass_ui.unregister()
     own_key_ui.unregister()
     chatgpt_ui.unregister()
     for cls in reversed(_CLASSES):

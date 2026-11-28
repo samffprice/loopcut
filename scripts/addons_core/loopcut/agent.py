@@ -2409,9 +2409,14 @@ def _request(session: dict, turn: Turn, cfg: config.Config, spec: LoopSpec = SIN
     def cap_reason(completion: llm.Completion) -> str:
         return "the wall-clock limit" if completion.timed_out else f"the {cfg.max_output_tokens}-token output cap"
 
+    from . import aipass
+    wallet = cfg.base_url == aipass.PROVIDER_URL
     completion = call(wired, cfg.reasoning_effort)
     record(completion)
     if _completion_unusable(completion):
+        if wallet:
+            _drop_empty(items, reply)
+            raise llm.LLMError(f"AI Pass stopped at {cap_reason(completion)} without a usable reply.")
         retry_effort = "high" if cfg.reasoning_effort == "max" else cfg.reasoning_effort
         print(f"Loopcut: {spec.role} step hit {cap_reason(completion)} with no usable reply or tool call; "
               f"retrying once at effort={retry_effort}.")
@@ -2432,6 +2437,9 @@ def _request(session: dict, turn: Turn, cfg: config.Config, spec: LoopSpec = SIN
             print(f"Loopcut: {spec.role} reply stopped by the provider's content filter "
                   f"(finish_reason {completion.finish_reason!r}).")
             raise llm.LLMError(FILTERED_REPLY_MESSAGE, code=llm.CONTENT_FILTER)
+        if wallet:
+            _drop_empty(items, reply)
+            raise llm.LLMError(EMPTY_REPLY_MESSAGE, code=llm.EMPTY_REPLY)
         print(f"Loopcut: {spec.role} step came back "
               f"{'a cut-off fragment' if fragment else _empty_kind(completion)}; retrying once.")
         reply["text"] = ""  # The retry's own text, not appended to a fragment.

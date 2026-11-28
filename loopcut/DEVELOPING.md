@@ -104,6 +104,30 @@ runs in stock Blender, borrowing a Text Editor area; the harness uses whichever 
 
 The dev build has `WITH_ASSERT_ABORT` on; a release build must turn it and `WITH_ASSERT_RELEASE` off.
 
+## AI Pass provider
+
+Create or sign in to a Loopcut-owned [AI Pass account](https://aipass.one/). With this checkout
+open, ask your coding agent to follow the [AI Pass integration skill](https://aipass.one/skills/aipass-integration/SKILL.md)
+and provision a public desktop OAuth client for **Loopcut**. Request the runtime scope `api:access`
+and the exact redirect URI `http://127.0.0.1:43129/auth/callback`. Approve the agent's setup
+request in your browser.
+
+Ask the agent to put the returned public `clientId` in `PUBLIC_CLIENT_ID` in
+`scripts/addons_core/loopcut/aipass.py`. Packaged builds use that value.
+For local testing, `LOOPCUT_AIPASS_CLIENT_ID` overrides it. The desktop app uses PKCE
+and needs only the public client ID.
+
+In **Preferences → Add-ons → Loopcut**, select **AI Pass** and click **Connect AI Pass**.
+Approve the wallet connection in the browser, then return to Blender. The model list includes
+chat models with tool calling and image input. Send a message in the Loopcut panel to run a model
+call. Model requests use the connected AI Pass wallet. Disconnect from the same settings page.
+
+Run the wallet protocol and streaming tests without spending from a wallet.
+
+```sh
+python3 -m unittest discover -s loopcut/tests -p test_aipass.py
+```
+
 ## Bundled extensions
 
 UniV, LoopTools, Node Arrange, MPFB and Bool Tool ship unmodified in

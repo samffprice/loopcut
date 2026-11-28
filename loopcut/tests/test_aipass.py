@@ -33,6 +33,12 @@ class WalletTest(unittest.TestCase):
                                                  "LOOPCUT_AIPASS_CLIENT_ID": "test-client"}))
         self.folder = Path(folder.name)
 
+    def test_client_id_uses_packaged_value_with_a_local_override(self):
+        with patch.object(aipass, "PUBLIC_CLIENT_ID", "packaged-client"):
+            self.assertEqual(aipass.client_id(), "test-client")
+            with patch.dict(os.environ, {"LOOPCUT_AIPASS_CLIENT_ID": "  "}):
+                self.assertEqual(aipass.client_id(), "packaged-client")
+
     def test_callback_validates_state_and_exchanges_pkce(self):
         # Use an ephemeral port in the test, while ensuring the identical callback reaches token exchange.
         callback = chatgpt_auth._CallbackServer(0, allow_fallback=False)

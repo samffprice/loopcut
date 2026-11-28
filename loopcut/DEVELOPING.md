@@ -106,9 +106,16 @@ The dev build has `WITH_ASSERT_ABORT` on; a release build must turn it and `WITH
 
 ## AI Pass provider
 
-Set `LOOPCUT_AIPASS_CLIENT_ID` in the environment before starting Blender. Use a public AI Pass
-OAuth client with the `api:access` scope and exact redirect URI
-`http://127.0.0.1:43129/auth/callback`. The client ID is public and the desktop app uses PKCE.
+Create or sign in to a Loopcut-owned [AI Pass account](https://aipass.one/). With this checkout
+open, ask your coding agent to follow the [AI Pass integration skill](https://aipass.one/skills/aipass-integration/SKILL.md)
+and provision a public desktop OAuth client for **Loopcut**. Request the runtime scope `api:access`
+and the exact redirect URI `http://127.0.0.1:43129/auth/callback`. Approve the agent's setup
+request in your browser.
+
+Ask the agent to put the returned public `clientId` in `PUBLIC_CLIENT_ID` in
+`scripts/addons_core/loopcut/aipass.py`. Packaged builds use that value.
+For local testing, `LOOPCUT_AIPASS_CLIENT_ID` overrides it. The desktop app uses PKCE
+and needs only the public client ID.
 
 In **Preferences → Add-ons → Loopcut**, select **AI Pass** and click **Connect AI Pass**.
 Approve the wallet connection in the browser, then return to Blender. The model list includes

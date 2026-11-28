@@ -13,6 +13,8 @@ from . import chatgpt_auth, credentials
 ORIGIN = "https://aipass.one"
 API_BASE = ORIGIN + "/v1"
 PROVIDER_URL = "aipass://wallet"
+# Loopcut maintainers set this to their public OAuth client ID for packaged builds.
+PUBLIC_CLIENT_ID = ""
 PORT = 43129
 CALLBACK = f"http://127.0.0.1:{PORT}/auth/callback"
 _SCOPE = "api:access"
@@ -31,7 +33,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def client_id() -> str:
-    return os.environ.get("LOOPCUT_AIPASS_CLIENT_ID", "").strip()
+    return os.environ.get("LOOPCUT_AIPASS_CLIENT_ID", "").strip() or PUBLIC_CLIENT_ID
 
 
 def _request(path: str, body: dict | None = None, *, form: bool = False) -> dict:

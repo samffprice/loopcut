@@ -104,6 +104,23 @@ runs in stock Blender, borrowing a Text Editor area; the harness uses whichever 
 
 The dev build has `WITH_ASSERT_ABORT` on; a release build must turn it and `WITH_ASSERT_RELEASE` off.
 
+## AI Pass provider
+
+Set `LOOPCUT_AIPASS_CLIENT_ID` in the environment before starting Blender. Use a public AI Pass
+OAuth client with the `api:access` scope and exact redirect URI
+`http://127.0.0.1:43129/auth/callback`. The client ID is public and the desktop app uses PKCE.
+
+In **Preferences → Add-ons → Loopcut**, select **AI Pass** and click **Connect AI Pass**.
+Approve the wallet connection in the browser, then return to Blender. The model list includes
+chat models with tool calling and image input. Send a message in the Loopcut panel to run a model
+call. Model requests use the connected AI Pass wallet. Disconnect from the same settings page.
+
+Run the wallet protocol and streaming tests without spending from a wallet.
+
+```sh
+python3 -m unittest discover -s loopcut/tests -p test_aipass.py
+```
+
 ## Bundled extensions
 
 UniV, LoopTools, Node Arrange, MPFB and Bool Tool ship unmodified in

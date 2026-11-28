@@ -28,7 +28,7 @@ from urllib.parse import urlparse
 
 from . import config, llm
 
-HOSTED = ("LOOPCUT", "CHATGPT")  # Loopcut's account and the ChatGPT plan: no own key to check.
+HOSTED = ("LOOPCUT", "CHATGPT", "AIPASS")  # Account-connected providers do not have an own key to check.
 
 OK = "ok"                      # The model answered the probe.
 KEY_OK = "key_ok"              # The models were listed; no model picked yet, so no probe.

@@ -425,7 +425,8 @@ class SettingsTest(unittest.TestCase):
     def test_providers_keep_their_stored_order_with_new_ones_appended(self):
         """Blender saves an enum by its item's position: a row inserted anywhere but the end would turn every saved
         provider after it into the next one."""
-        order = ["LOOPCUT", "META", "OPENAI", "OPENROUTER", "OLLAMA", "CUSTOM", "CHATGPT", "ANTHROPIC", "GEMINI", "KIMI"]
+        order = ["LOOPCUT", "META", "OPENAI", "OPENROUTER", "OLLAMA", "CUSTOM", "CHATGPT", "ANTHROPIC",
+                 "GEMINI", "KIMI", "AIPASS"]
         self.assertEqual([p[0] for p in self.settings.PROVIDERS], order,
                          "appended, so the stored enum values of the others stay what they were")
         items = type(self.prefs).__annotations__["provider"].options["items"]
